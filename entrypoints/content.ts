@@ -1,6 +1,11 @@
+import { boot } from '@/core/boot';
+
 export default defineContentScript({
-  matches: ['*://*.google.com/*'],
+  matches: ['*://*.acfun.cn/*'],
+  runAt: 'document_start',
   main() {
-    console.log('Hello content.');
+    void boot().catch((error) => {
+      console.error('[AcFun Helper] boot failed', error);
+    });
   },
 });

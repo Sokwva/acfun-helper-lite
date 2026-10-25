@@ -1,80 +1,109 @@
-:root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
+html,
+body {
+  min-width: 320px;
 }
 
 body {
   margin: 0;
+  background: #f5f7fa;
+  font-family:
+    Roboto,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  font-size: 13px;
+}
+
+.ah-popup {
   display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
 }
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
+.ah-popup__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
+.ah-popup__brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ah-popup__logo {
+  display: flex;
+  width: 38px;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgb(63 81 181 / 12%);
+  color: #3f51b5;
+  font-size: 22px;
+}
+
+.ah-popup h1 {
+  margin: 0;
+  font-size: 15px;
   font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
 }
 
-.card {
-  padding: 2em;
+.ah-popup__brand span {
+  color: rgb(0 0 0 / 54%);
+  font-size: 12px;
 }
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+.ah-popup__card {
+  padding: 14px;
 }
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+.ah-popup__card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ah-popup__card-title {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.ah-popup__card-sub {
+  margin-top: 4px;
+  color: rgb(0 0 0 / 54%);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ah-popup__button {
+  width: 100%;
+}
+
+.ah-popup__hint {
+  margin: 0;
+  color: rgb(0 0 0 / 54%);
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #303030;
   }
-  a:hover {
-    color: #747bff;
+
+  .ah-popup__logo {
+    background: rgb(255 255 255 / 12%);
+    color: #fff;
   }
-  button {
-    background-color: #f9f9f9;
+
+  .ah-popup__brand span,
+  .ah-popup__card-sub,
+  .ah-popup__hint {
+    color: rgb(255 255 255 / 60%);
   }
 }

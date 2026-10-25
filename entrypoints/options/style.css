@@ -1,0 +1,275 @@
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: #f5f7fa;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+.mdui-icon {
+  vertical-align: middle;
+}
+
+.ah-appbar__title {
+  margin-left: 4px;
+}
+
+.ah-appbar__version {
+  margin-left: 12px;
+  color: rgb(255 255 255 / 72%);
+  font-size: 12px;
+}
+
+.ah-drawer {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+.ah-drawer__brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px 12px;
+}
+
+.ah-drawer__logo {
+  display: flex;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgb(63 81 181 / 12%);
+  color: #3f51b5;
+  font-size: 24px;
+}
+
+.ah-drawer__title {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.ah-drawer__sub {
+  color: rgb(0 0 0 / 54%);
+  font-size: 12px;
+}
+
+.ah-search {
+  width: calc(100% - 32px);
+  margin: 0 16px 8px;
+}
+
+.ah-nav-count {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: rgb(0 0 0 / 8%);
+  color: rgb(0 0 0 / 54%);
+  font-size: 12px;
+}
+
+.ah-main {
+  max-width: 980px;
+  padding: 24px 24px 56px;
+}
+
+.ah-group {
+  margin-bottom: 28px;
+}
+
+.ah-group__title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: 18px;
+  font-weight: 500;
+}
+
+.ah-group__title .mdui-icon {
+  color: #3f51b5;
+  font-size: 20px;
+}
+
+.ah-module-card {
+  margin-bottom: 16px;
+  border-radius: 6px;
+}
+
+.ah-module-card__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 16px 0;
+}
+
+.ah-module-card__title {
+  min-width: 0;
+}
+
+.ah-module-card .mdui-card-primary-title {
+  font-size: 18px;
+  line-height: 28px;
+}
+
+.ah-module-card .mdui-card-primary-subtitle {
+  margin-top: 2px;
+}
+
+.ah-module-card__actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+}
+
+.ah-enable-label {
+  color: rgb(0 0 0 / 54%);
+  font-size: 13px;
+}
+
+.ah-module-card__body {
+  padding: 4px 16px 16px;
+}
+
+.ah-module-card--disabled .ah-module-card__body {
+  opacity: 0.55;
+}
+
+.ah-reset-btn {
+  min-width: 0;
+}
+
+.ah-field--switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0 4px;
+}
+
+.ah-field__label {
+  font-size: 14px;
+}
+
+.ah-field__description {
+  color: rgb(0 0 0 / 54%);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ah-field--color {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.ah-field--color .mdui-textfield {
+  flex: 1;
+  min-width: 0;
+}
+
+.ah-color-input {
+  width: 44px;
+  height: 44px;
+  margin-top: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.ah-native-select {
+  width: 100%;
+  padding-bottom: 6px;
+  border: 0;
+  border-bottom: 1px solid rgb(0 0 0 / 42%);
+  outline: none;
+  background: transparent;
+  color: inherit;
+  font-size: 16px;
+}
+
+.ah-switch-label {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.ah-state {
+  padding: 24px 0;
+  color: rgb(0 0 0 / 54%);
+  text-align: center;
+}
+
+.ah-state .mdui-progress {
+  margin-bottom: 16px;
+}
+
+.ah-state--error {
+  color: #e53935;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background-color: #303030;
+  }
+
+  .ah-drawer {
+    background-color: #424242;
+  }
+
+  .ah-drawer__sub,
+  .ah-enable-label,
+  .ah-field__description,
+  .ah-state {
+    color: rgb(255 255 255 / 60%);
+  }
+
+  .ah-drawer__logo {
+    background: rgb(255 255 255 / 12%);
+    color: #fff;
+  }
+
+  .ah-nav-count {
+    background: rgb(255 255 255 / 12%);
+    color: rgb(255 255 255 / 60%);
+  }
+
+  .ah-group__title .mdui-icon {
+    color: #7986cb;
+  }
+
+  .ah-native-select {
+    border-bottom-color: rgb(255 255 255 / 42%);
+  }
+}
+
+@media (max-width: 1023px) {
+  .ah-main {
+    padding: 16px 16px 48px;
+  }
+
+  .ah-module-card__head {
+    flex-direction: column;
+  }
+
+  .ah-module-card__actions {
+    align-self: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .ah-appbar__version,
+  .ah-reset-btn span {
+    display: none;
+  }
+}
