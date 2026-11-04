@@ -2,6 +2,14 @@ import { ref, shallowRef, type Ref, type ShallowRef } from 'vue';
 import { waitFor } from './dom';
 import { createLogger } from './log';
 
+const FRAME_RATE_BY_LABEL: Record<string, number> = {
+  '24': 23.976,
+  '25': 25,
+  '30': 29.97,
+  '60': 59.94,
+  '120': 120,
+};
+
 export interface PlayerApi {
   video: ShallowRef<HTMLVideoElement | null>;
   currentTime: Ref<number>;
@@ -9,7 +17,12 @@ export interface PlayerApi {
   loaded: Ref<number>;
   controlsVisible: Ref<boolean>;
   fullscreenTarget: ShallowRef<HTMLElement>;
+  controlBarRight: ShallowRef<HTMLElement | null>;
+  speedPanel: ShallowRef<HTMLElement | null>;
   whenReady(): Promise<boolean>;
+  whenControlBarReady(): Promise<boolean>;
+  whenSpeedPanelReady(): Promise<boolean>;
+  getFrameRate(): number;
   destroy(): void;
 }
 
@@ -21,11 +34,16 @@ export function createPlayerApi(): PlayerApi {
   const loaded = ref(0);
   const controlsVisible = ref(false);
   const fullscreenTarget = shallowRef<HTMLElement>(document.documentElement);
+  const controlBarRight = shallowRef<HTMLElement | null>(null);
+  const speedPanel = shallowRef<HTMLElement | null>(null);
 
   let currentVideo: HTMLVideoElement | null = null;
   let controlBar: HTMLElement | null = null;
   let controlBarObserver: MutationObserver | null = null;
+  let controlBarChildObserver: MutationObserver | null = null;
   let readyPromise: Promise<boolean> | null = null;
+  let controlBarReadyPromise: Promise<boolean> | null = null;
+  let speedPanelReadyPromise: Promise<boolean> | null = null;
   let destroyed = false;
 
   const findPlayerRoot = (): HTMLElement | null =>
@@ -38,6 +56,38 @@ export function createPlayerApi(): PlayerApi {
   const findControlBar = (): HTMLElement | null =>
     document.querySelector<HTMLElement>('#ACPlayer .control-bar-top') ??
     document.querySelector<HTMLElement>('.control-bar-top');
+
+  const findControlBarRight = (): HTMLElement | null =>
+    document.querySelector<HTMLElement>(
+      '#ACPlayer .control-bar-top .box-right',
+    ) ??
+    document.querySelector<HTMLElement>('.control-bar-top .box-right');
+
+  const findQualityButton = (): HTMLElement | null =>
+    document.querySelector<HTMLElement>('#ACPlayer .control-btn.quality') ??
+    document.querySelector<HTMLElement>('.control-btn.quality');
+
+  const findSpeedPanel = (): HTMLElement | null => {
+    const findIn = (scope: ParentNode): HTMLElement | null => {
+      const panels = scope.querySelectorAll<HTMLElement>(
+        '.control-btn.speed .speed-panel',
+      );
+
+      for (const panel of panels) {
+        if (
+          panel.closest('.ah-ab-play, .ah-frame-step, [data-acfun-helper]')
+        ) {
+          continue;
+        }
+
+        return panel;
+      }
+
+      return null;
+    };
+
+    return findIn(findPlayerRoot() ?? document) ?? findIn(document);
+  };
 
   const isMainVideo = (element: HTMLVideoElement): boolean => {
     const root = findPlayerRoot();
@@ -100,22 +150,38 @@ export function createPlayerApi(): PlayerApi {
   const syncControlBar = () => {
     const next = findControlBar();
 
-    if (next === controlBar) {
-      updateControlsVisible();
-      return;
+    if (next !== controlBar) {
+      controlBarObserver?.disconnect();
+      controlBarChildObserver?.disconnect();
+      controlBar = next;
+
+      if (controlBar) {
+        controlBarObserver = new MutationObserver(updateControlsVisible);
+        controlBarObserver.observe(controlBar, {
+          attributes: true,
+          attributeFilter: ['data-bind-attr', 'style', 'class'],
+        });
+
+        controlBarChildObserver = new MutationObserver(() => {
+          const right = findControlBarRight();
+          if (right !== controlBarRight.value) {
+            controlBarRight.value = right;
+          }
+
+          const panel = findSpeedPanel();
+          if (panel !== speedPanel.value) {
+            speedPanel.value = panel;
+          }
+        });
+        controlBarChildObserver.observe(controlBar, {
+          childList: true,
+          subtree: true,
+        });
+      }
     }
 
-    controlBarObserver?.disconnect();
-    controlBar = next;
-
-    if (controlBar) {
-      controlBarObserver = new MutationObserver(updateControlsVisible);
-      controlBarObserver.observe(controlBar, {
-        attributes: true,
-        attributeFilter: ['data-bind-attr', 'style', 'class'],
-      });
-    }
-
+    controlBarRight.value = findControlBarRight();
+    speedPanel.value = findSpeedPanel();
     updateControlsVisible();
   };
 
@@ -187,6 +253,7 @@ export function createPlayerApi(): PlayerApi {
 
   const handleFullscreenChange = () => {
     updateFullscreenTarget();
+    syncControlBar();
   };
 
   document.addEventListener('play', handleCapturedMediaEvent, true);
@@ -222,12 +289,79 @@ export function createPlayerApi(): PlayerApi {
     return readyPromise;
   };
 
+  const whenControlBarReady = (): Promise<boolean> => {
+    if (controlBarReadyPromise) {
+      return controlBarReadyPromise;
+    }
+
+    controlBarReadyPromise = (async () => {
+      const element = await waitFor<HTMLElement>(findControlBarRight, {
+        timeout: 0,
+      });
+
+      if (destroyed || !element) {
+        return false;
+      }
+
+      controlBarRight.value = element;
+      syncControlBar();
+      return true;
+    })();
+
+    return controlBarReadyPromise;
+  };
+
+  const whenSpeedPanelReady = (): Promise<boolean> => {
+    if (speedPanelReadyPromise) {
+      return speedPanelReadyPromise;
+    }
+
+    speedPanelReadyPromise = (async () => {
+      const element = await waitFor<HTMLElement>(findSpeedPanel, {
+        timeout: 0,
+      });
+
+      if (destroyed || !element) {
+        return false;
+      }
+
+      speedPanel.value = element;
+      syncControlBar();
+      return true;
+    })();
+
+    return speedPanelReadyPromise;
+  };
+
+  const getFrameRate = (): number => {
+    const qualityButton = findQualityButton();
+
+    if (!qualityButton) {
+      return 23.976;
+    }
+
+    const label =
+      (qualityButton.firstElementChild as HTMLElement | null)?.innerText ??
+      qualityButton.innerText ??
+      '';
+    const match = label.match(/(?:P|K)(\d{2,3})/i);
+    const frameRate = match?.[1]
+      ? FRAME_RATE_BY_LABEL[match[1]]
+      : undefined;
+
+    return frameRate ?? 23.976;
+  };
+
   const destroy = () => {
     destroyed = true;
     detachVideo();
     controlBarObserver?.disconnect();
     controlBarObserver = null;
+    controlBarChildObserver?.disconnect();
+    controlBarChildObserver = null;
     controlBar = null;
+    controlBarRight.value = null;
+    speedPanel.value = null;
     document.removeEventListener('play', handleCapturedMediaEvent, true);
     document.removeEventListener(
       'loadedmetadata',
@@ -249,7 +383,12 @@ export function createPlayerApi(): PlayerApi {
     loaded,
     controlsVisible,
     fullscreenTarget,
+    controlBarRight,
+    speedPanel,
     whenReady,
+    whenControlBarReady,
+    whenSpeedPanelReady,
+    getFrameRate,
     destroy,
   };
 }

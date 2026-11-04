@@ -66,29 +66,5 @@ const openOptions = () => {
       </button>
     </header>
 
-    <div v-if="flexConfig && conf" class="mdui-card ah-popup__card">
-      <div class="ah-popup__card-head">
-        <div>
-          <div class="ah-popup__card-title">{{ flexConfig.title }}</div>
-          <div class="ah-popup__card-sub">
-            {{ flexConfig.description }}
-          </div>
-        </div>
-        <MduiSwitch
-          :model-value="conf.enabled"
-          @update:model-value="toggle"
-        />
-      </div>
-    </div>
-
-    <p v-else class="ah-popup__hint">正在加载设置...</p>
-
-    <button
-      type="button"
-      class="mdui-btn mdui-btn-raised mdui-ripple mdui-color-theme-accent ah-popup__button"
-      @click="openOptions"
-    >
-      打开全部设置
-    </button>
   </div>
 </template>

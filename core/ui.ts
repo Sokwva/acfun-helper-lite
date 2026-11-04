@@ -2,20 +2,30 @@ import { createApp, type Component } from 'vue';
 import type { ModuleContext } from './module';
 import { MODULE_CONTEXT_KEY } from './module';
 
+interface MountVueOptions {
+  target?: HTMLElement;
+  removeTarget?: boolean;
+}
+
 export function mountVueComponent(
   component: Component,
   props: Record<string, unknown> | undefined,
   context: ModuleContext<any>,
   signal: AbortSignal,
-): void {
-  const parent = document.body ?? document.documentElement;
-  if (!parent) {
-    throw new Error('AcFun Helper: unable to find mount parent');
-  }
-
-  const host = document.createElement('div');
+  options: MountVueOptions = {},
+): () => void {
+  const target = options.target;
+  const host = target ?? document.createElement('div');
   host.dataset.acfunHelper = 'ui';
-  parent.appendChild(host);
+
+  if (!target) {
+    const parent = document.body ?? document.documentElement;
+    if (!parent) {
+      throw new Error('AcFun Helper: unable to find mount parent');
+    }
+
+    parent.appendChild(host);
+  }
 
   const app = createApp(component, props ?? {});
   app.provide(MODULE_CONTEXT_KEY, context);
@@ -33,9 +43,19 @@ export function mountVueComponent(
 
     mounted = false;
     app.unmount();
-    host.remove();
+
+    if (!target || options.removeTarget) {
+      host.remove();
+    }
+
     signal.removeEventListener('abort', unmount);
   };
 
-  signal.addEventListener('abort', unmount, { once: true });
+  if (signal.aborted) {
+    unmount();
+  } else {
+    signal.addEventListener('abort', unmount, { once: true });
+  }
+
+  return unmount;
 }

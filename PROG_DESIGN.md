@@ -29,23 +29,11 @@ content script 不引入 mdui。mdui 只存在于扩展页面，避免影响页�
 ```text
 v3/
 ├─ entrypoints/
-│  ├─ background.ts
-│  ├─ content.ts
 │  ├─ options/
 │  │  └─ components/
 │  └─ popup/
 ├─ core/
-│  ├─ boot.ts
-│  ├─ module.ts
-│  ├─ registry.ts
-│  ├─ player.ts
-│  ├─ ui.ts
-│  ├─ dom.ts
-│  ├─ log.ts
 │  └─ settings/
-│     ├─ schema.ts
-│     ├─ storage.ts
-│     └─ registry.ts
 ├─ modules/
 │  ├─ global/
 │  ├─ video/
@@ -58,12 +46,7 @@ v3/
 │  └─ mdui/
 ├─ ui/
 │  └─ mdui/
-│     ├─ styles.ts
-│     ├─ runtime.ts
-│     ├─ popup.ts
-│     └─ trimFonts.ts
 ├─ shared/
-│  └─ regs.ts
 └─ public/
 ```
 
@@ -155,7 +138,12 @@ interface PlayerApi {
   loaded: Ref<number>;
   controlsVisible: Ref<boolean>;
   fullscreenTarget: ShallowRef<HTMLElement>;
+  controlBarRight: ShallowRef<HTMLElement | null>;
+  speedPanel: ShallowRef<HTMLElement | null>;
   whenReady(): Promise<boolean>;
+  whenControlBarReady(): Promise<boolean>;
+  whenSpeedPanelReady(): Promise<boolean>;
+  getFrameRate(): number;
   destroy(): void;
 }
 ```
@@ -172,11 +160,13 @@ interface PlayerApi {
 
 ### 4.5 Vue 挂载层
 
-`core/ui.ts` 为模块提供 `ui.mount(component, props)`：
+`core/ui.ts` 为模块提供 `ui.mount(component, props)` 和 `ui.mountAt(target, component, props)`：
 
-- 每次挂载创建独立 Vue 应用和宿主节点。
+- 每次挂载创建独立 Vue 应用。
+- `mount` 自动创建并挂载到独立宿主节点。
+- `mountAt` 挂载到模块指定的页面节点，适合播放器控制栏等场景。
 - 自动向组件注入模块上下文。
-- 模块停止时自动 `unmount` 并移除宿主节点。
+- 返回 `unmount` 清理函数；模块停止时也会自动 `unmount`。
 - 一个模块可以挂载多个 Vue 组件。
 
 内容脚本不创建一个覆盖全站的大 Vue 应用，避免模块之间相互影响。
@@ -230,7 +220,6 @@ mdui 完整 CSS 约 325KB，完整字体资源约 2MB。当前策略：
 - options / popup 引入完整 mdui CSS。
 - 通过 `ui/mdui/trimFonts.ts` 只保留 Material Icons 和 Roboto 400 / 500 / 700 的 woff2。
 - content script 不引入 mdui，保持原有体积。
-- 当前构建总大小约 754KB，其中 mdui CSS 约 283KB，字体约 236KB；content script 保持约 78KB。
 - 后续如有必要，再通过 PurgeCSS 或组件级 CSS 裁剪进一步减小 CSS。
 
 ## 6. 底部进度条模块
@@ -270,7 +259,130 @@ modules/video/flex-progress-bar/
 - 非视频页不注入。
 - `pnpm compile` 和 `pnpm build` 通过。
 
-## 7. 后续模块规划
+## 7. AB 回放模块
+
+模块位于：
+
+```text
+modules/video/ab-play/
+├─ config.ts
+├─ index.ts
+└─ ABPlay.vue
+```
+
+功能：
+
+- 在 AcFun 原生控制栏注入 AB 入口。
+- 标记 A / B 两个时间点。
+- 在 A、B 之间循环播放。
+- 停止循环时暂停视频。
+- 分 P、视频实例或媒体源变化时重置 A/B。
+- 操作提示可配置关闭。
+
+实现方式：
+
+- `PlayerApi.controlBarRight` 暴露控制栏右侧按钮容器。
+- 创建原生 `div.control-btn.speed` 宿主，并 `prepend` 到 `.box-right`。
+- 通过 `ui.mountAt` 把 Vue 应用直接挂载到该宿主。
+- 复用 AcFun 的 `control-btn speed` / `speed-panel` 样式，不额外覆盖面板视觉。
+- 使用原生 `.left-bottom-tip` 显示操作提示；不存在时不显示。
+- 使用原生 `timeupdate` 检查循环边界，补充 `ended` 处理。
+- A/B 状态仅保存在模块运行期间，不写入配置。
+- 模块停止时自动移除监听、Vue 应用和控制栏宿主。
+
+## 8. 帧步进模块
+
+模块位于：
+
+```text
+modules/video/frame-step/
+├─ config.ts
+├─ index.ts
+└─ FrameStep.vue
+```
+
+功能：
+
+- 在 AcFun 原生控制栏注入帧步进入口。
+- 暂停视频后前进或后退一帧。
+- 自动从清晰度标签识别帧率。
+- 支持在设置页手动覆盖帧率。
+- 支持 `Shift+A` / `Shift+D` 快捷键。
+
+实现方式：
+
+- 创建 `div.control-btn.speed.ah-frame-step` 宿主。
+- 通过共享 `insertControlButton` 按 order 插入 `.box-right`，保证和 AB 按钮顺序稳定。
+- 使用 `ui.mountAt` 挂载 Vue 面板。
+- 面板和 SVG 使用 AcFun 原生 `speed-panel` / `control-btn.speed` 样式。
+- `PlayerApi.getFrameRate()` 解析清晰度标签，失败回退 23.976。
+- 设置页可选择自动识别或固定帧率。
+- 快捷键仅在非输入状态下生效，模块停止时移除监听。
+
+## 9. 自定义倍速模块
+
+模块位于：
+
+```text
+modules/video/custom-rate/
+├─ config.ts
+└─ index.ts
+```
+
+功能：
+
+- 在原生倍速菜单末尾添加“自定义”入口。
+- 使用 `prompt()` 输入 0～5（不含 5）的倍速。
+- 支持 `Shift+↑` / `Shift+↓` 以 0.25 步进调整倍速。
+- 快捷键范围限制在 0.25～2。
+
+实现方式：
+
+- `PlayerApi.speedPanel` 暴露原生倍速面板，自动排除 AB / 帧步进注入的面板。
+- `whenSpeedPanelReady()` 等待面板出现。
+- 在原生 `<ul>` 末尾插入自定义 `<li>`。
+- 使用 `MutationObserver` 在 React 重渲染后重新插入。
+- 输入格式错误时使用 `alert()`，保持旧版 / main 行为。
+- 模块停止时移除节点、observer 和键盘监听。
+
+## 10. MediaSession 模块
+
+模块位于：
+
+```text
+modules/video/media-session/
+├─ config.ts
+├─ index.ts
+└─ pageInfo.ts
+```
+
+主世界桥接：
+
+```text
+entrypoints/page-info.content.ts
+```
+
+功能：
+
+- 在普通视频页同步系统媒体面板信息。
+- 显示标题、Up 主、分区和封面。
+- 多 P 时标题包含当前分 P 名称。
+- 支持播放、暂停、停止、快进、快退、seekto。
+- 支持上一 P / 下一 P。
+- 模块停用时恢复原有 metadata / playbackState。
+
+实现方式：
+
+- 主世界 content script 轮询 `window.pageInfo`，把最简信息写入隐藏节点。
+- 隔离世界通过 `pageInfo.ts` 读取并解析，失败时回退到 DOM / meta。
+- 视频事件绑定在 `player.video` 上，视频实例变化时自动重新绑定。
+- 使用 `playbackState` 同步播放状态。
+- 使用节流的 `setPositionState` 同步进度和倍速。
+- 分 P 切换实时计算索引，首尾循环正确。
+- 所有 action handler 都用 try/catch 注册和清理。
+- 清理时恢复原 metadata、playbackState 和 positionState，并移除所有监听。
+
+## 11. 后续模块规划
 
 | 层 | 目录 | 职责 |
 |---|---|---|

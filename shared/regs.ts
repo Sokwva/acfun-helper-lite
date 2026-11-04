@@ -2,6 +2,7 @@ export type PageKind =
   | 'video'
   | 'bangumi'
   | 'live'
+  | 'live-index'
   | 'article'
   | 'index'
   | 'search'
@@ -20,11 +21,8 @@ export function detectPage(url: string = window.location.href): PageKind {
     return 'other';
   }
 
-  if (
-    parsed.hostname === 'live.acfun.cn' &&
-    parsed.pathname.startsWith('/live/')
-  ) {
-    return 'live';
+  if (parsed.hostname === 'live.acfun.cn') {
+    return parsed.pathname.startsWith('/live/') ? 'live' : 'live-index';
   }
 
   if (parsed.hostname !== 'www.acfun.cn') {

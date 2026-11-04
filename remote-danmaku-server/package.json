@@ -1,0 +1,9 @@
+{
+  "name": "acfun-helper-live-relay",
+  "private": true,
+  "type": "module",
+  "description": "AcFun Helper 直播弹幕中转服务",
+  "scripts": {
+    "start": "node server.mjs"
+  }
+}

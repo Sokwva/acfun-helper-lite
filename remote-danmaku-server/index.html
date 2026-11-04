@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0f1218" />
+    <title>AcFun 直播弹幕</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --font-size: 16px;
+        --bg: #0f1218;
+        --bar: #171b23;
+        --line: #262c38;
+        --text: #e8eaed;
+        --muted: #8b93a1;
+        --accent: #fd4c5d;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+
+      body {
+        display: flex;
+        flex-direction: column;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, 'Segoe UI', 'PingFang SC',
+          'Microsoft YaHei', sans-serif;
+        font-size: var(--font-size);
+        overflow: hidden;
+      }
+
+      .bar {
+        flex: 0 0 auto;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 12px;
+        padding-top: calc(10px + env(safe-area-inset-top));
+        background: var(--bar);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85em;
+        color: var(--muted);
+        white-space: nowrap;
+      }
+
+      .dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #f59e0b;
+        box-shadow: 0 0 6px currentColor;
+      }
+
+      .dot.connected {
+        background: #22c55e;
+      }
+
+      .dot.reconnecting {
+        background: #f59e0b;
+      }
+
+      .room {
+        font-size: 0.8em;
+        color: var(--muted);
+      }
+
+      .spacer {
+        flex: 1 1 auto;
+      }
+
+      .tools {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+
+      button,
+      select {
+        font: inherit;
+        font-size: 0.8em;
+        color: var(--text);
+        background: #202633;
+        border: 1px solid #2f3746;
+        border-radius: 8px;
+        padding: 6px 10px;
+        cursor: pointer;
+        line-height: 1.2;
+      }
+
+      button:hover,
+      select:hover {
+        background: #283040;
+      }
+
+      button.on {
+        border-color: var(--accent);
+        color: #ffd5d9;
+      }
+
+      button.icon {
+        padding: 6px 9px;
+        font-weight: 700;
+      }
+
+      #list {
+        flex: 1 1 auto;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        padding: 6px 14px 24px;
+      }
+
+      #list:empty::after {
+        content: '等待弹幕…\A请确认电脑上已运行中转服务，并在扩展设置里开启“直播弹幕转发”。';
+        white-space: pre-line;
+        display: block;
+        margin-top: 40px;
+        text-align: center;
+        color: var(--muted);
+        font-size: 0.85em;
+        line-height: 1.8;
+      }
+
+      .msg {
+        padding: 5px 0;
+        line-height: 1.55;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.035);
+      }
+
+      .msg[hidden] {
+        display: none;
+      }
+
+      .time {
+        color: #5f6875;
+        font-size: 0.75em;
+        margin-right: 8px;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .medal {
+        display: inline-block;
+        font-size: 0.7em;
+        color: #f0c97a;
+        border: 1px solid #4a3d22;
+        background: #2a2415;
+        border-radius: 999px;
+        padding: 0 6px;
+        margin-right: 6px;
+        vertical-align: 1px;
+      }
+
+      .badge {
+        display: inline-block;
+        font-size: 0.7em;
+        color: #cbd5e1;
+        background: #2a3140;
+        border-radius: 999px;
+        padding: 0 6px;
+        margin-right: 6px;
+        vertical-align: 1px;
+      }
+
+      .nick {
+        color: #7cc4ff;
+        font-weight: 600;
+        margin-right: 6px;
+      }
+
+      .text {
+        color: #d7dbe2;
+      }
+
+      .msg--gift .badge,
+      .msg--gift .nick {
+        color: #ffb066;
+      }
+
+      .msg--gift .badge {
+        background: #4a2c12;
+      }
+
+      .msg--user-enter {
+        color: var(--muted);
+      }
+
+      .msg--user-enter .nick {
+        color: #9aa4b2;
+        font-weight: 400;
+      }
+
+      .msg--like .nick {
+        color: #f472b6;
+      }
+
+      .msg--follow .nick {
+        color: #38bdf8;
+      }
+
+      .msg--join-club .nick {
+        color: #c084fc;
+      }
+
+      .msg--rich-text .badge {
+        background: #4a1d1d;
+        color: #ff8f8f;
+      }
+
+      .msg--emoji .text {
+        color: #a5b4fc;
+      }
+
+      @media (max-width: 520px) {
+        .bar {
+          gap: 6px;
+        }
+
+        .status {
+          font-size: 0.8em;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header class="bar">
+      <div class="status">
+        <span id="dot" class="dot"></span>
+        <span id="status">连接中…</span>
+      </div>
+      <span id="room" class="room"></span>
+      <span class="spacer"></span>
+      <div class="tools">
+        <select id="filter" title="显示类型">
+          <option value="all">全部</option>
+          <option value="comment">仅评论</option>
+          <option value="no-lurk">隐藏进场/点赞</option>
+          <option value="gift">仅礼物/关注</option>
+        </select>
+        <button id="follow" type="button" class="on">自动滚动:开</button>
+        <button id="wake" type="button">常亮:关</button>
+        <button id="smaller" type="button" class="icon" title="缩小字体">A-</button>
+        <button id="bigger" type="button" class="icon" title="放大字体">A+</button>
+        <button id="clear" type="button">清屏</button>
+      </div>
+    </header>
+
+    <main id="list"></main>
+
+    <script>
+      const list = document.getElementById('list');
+      const dot = document.getElementById('dot');
+      const statusText = document.getElementById('status');
+      const roomText = document.getElementById('room');
+      const filterSelect = document.getElementById('filter');
+      const followButton = document.getElementById('follow');
+      const wakeButton = document.getElementById('wake');
+      const smallerButton = document.getElementById('smaller');
+      const biggerButton = document.getElementById('bigger');
+      const clearButton = document.getElementById('clear');
+
+      const FONT_KEY = 'ah-relay-font';
+      const FILTER_KEY = 'ah-relay-filter';
+      const FOLLOW_KEY = 'ah-relay-follow';
+      const MAX_ITEMS = 600;
+
+      const TYPE_LABEL = {
+        gift: '礼物',
+        'user-enter': '进场',
+        like: '点赞',
+        follow: '关注',
+        'join-club': '守护团',
+        'rich-text': '红包',
+        emoji: '表情',
+        other: '消息',
+      };
+
+      const seen = new Set();
+      const seenOrder = [];
+      let follow = localStorage.getItem(FOLLOW_KEY) !== '0';
+
+      function remember(id) {
+        if (!id) {
+          return true;
+        }
+
+        if (seen.has(id)) {
+          return false;
+        }
+
+        seen.add(id);
+        seenOrder.push(id);
+
+        if (seenOrder.length > 4000) {
+          seen.delete(seenOrder.shift());
+        }
+
+        return true;
+      }
+
+      function formatTime(timestamp) {
+        const date = new Date(Number.isFinite(timestamp) ? timestamp : Date.now());
+        return date.toLocaleTimeString('zh-CN', { hour12: false });
+      }
+
+      function passesFilter(type) {
+        switch (filterSelect.value) {
+          case 'comment':
+            return type === 'comment';
+          case 'no-lurk':
+            return type !== 'user-enter' && type !== 'like';
+          case 'gift':
+            return (
+              type === 'gift' ||
+              type === 'follow' ||
+              type === 'join-club' ||
+              type === 'rich-text'
+            );
+          default:
+            return true;
+        }
+      }
+
+      function applyFilter() {
+        for (const item of list.children) {
+          item.hidden = !passesFilter(item.dataset.type);
+        }
+      }
+
+      function createItem(message) {
+        const item = document.createElement('div');
+        item.className = `msg msg--${message.type}`;
+        item.dataset.type = message.type;
+
+        const time = document.createElement('span');
+        time.className = 'time';
+        time.textContent = formatTime(message.timestamp);
+        item.append(time);
+
+        if (message.medal) {
+          const medal = document.createElement('span');
+          medal.className = 'medal';
+          medal.textContent = message.medal;
+          item.append(medal);
+        }
+
+        const label = TYPE_LABEL[message.type];
+        if (label) {
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = label;
+          item.append(badge);
+        }
+
+        if (message.nickname) {
+          const nick = document.createElement('span');
+          nick.className = 'nick';
+          nick.textContent = message.nickname;
+          item.append(nick);
+        }
+
+        const text = document.createElement('span');
+        text.className = 'text';
+        text.textContent = message.content;
+        item.append(text);
+
+        item.hidden = !passesFilter(message.type);
+
+        return item;
+      }
+
+      function appendMessage(message) {
+        if (!message || typeof message !== 'object') {
+          return;
+        }
+
+        if (!remember(message.id)) {
+          return;
+        }
+
+        list.append(createItem(message));
+
+        while (list.childElementCount > MAX_ITEMS) {
+          const first = list.firstElementChild;
+          if (!first) {
+            break;
+          }
+          list.removeChild(first);
+        }
+
+        if (follow) {
+          list.scrollTop = list.scrollHeight;
+        }
+      }
+
+      function appendMessages(messages) {
+        if (!Array.isArray(messages)) {
+          return;
+        }
+
+        for (const message of messages) {
+          appendMessage(message);
+        }
+      }
+
+      function setStatus(state) {
+        dot.className = `dot ${state}`;
+        statusText.textContent = state === 'connected' ? '已连接' : '重连中…';
+      }
+
+      function updateFollowButton() {
+        followButton.textContent = follow ? '自动滚动:开' : '自动滚动:关';
+        followButton.classList.toggle('on', follow);
+      }
+
+      function connect() {
+        const source = new EventSource('/events');
+
+        source.addEventListener('open', () => setStatus('connected'));
+        source.addEventListener('error', () => setStatus('reconnecting'));
+
+        source.addEventListener('history', (event) => {
+          const data = JSON.parse(event.data);
+          if (data.room) {
+            roomText.textContent = `房间 ${data.room}`;
+          }
+          appendMessages(data.messages);
+        });
+
+        source.addEventListener('danmaku', (event) => {
+          const data = JSON.parse(event.data);
+          if (data.room) {
+            roomText.textContent = `房间 ${data.room}`;
+          }
+          appendMessages(data.messages);
+        });
+      }
+
+      list.addEventListener('scroll', () => {
+        const nearBottom =
+          list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+
+        if (nearBottom !== follow) {
+          follow = nearBottom;
+          localStorage.setItem(FOLLOW_KEY, follow ? '1' : '0');
+          updateFollowButton();
+        }
+      });
+
+      followButton.addEventListener('click', () => {
+        follow = !follow;
+        localStorage.setItem(FOLLOW_KEY, follow ? '1' : '0');
+        updateFollowButton();
+
+        if (follow) {
+          list.scrollTop = list.scrollHeight;
+        }
+      });
+
+      smallerButton.addEventListener('click', () => {
+        adjustFont(-1);
+      });
+
+      biggerButton.addEventListener('click', () => {
+        adjustFont(1);
+      });
+
+      function adjustFont(delta) {
+        const current = Number(localStorage.getItem(FONT_KEY)) || 16;
+        const next = Math.min(30, Math.max(12, current + delta));
+        localStorage.setItem(FONT_KEY, String(next));
+        document.documentElement.style.setProperty('--font-size', `${next}px`);
+      }
+
+      const savedFont = Number(localStorage.getItem(FONT_KEY));
+      if (savedFont) {
+        document.documentElement.style.setProperty(
+          '--font-size',
+          `${Math.min(30, Math.max(12, savedFont))}px`,
+        );
+      }
+
+      const savedFilter = localStorage.getItem(FILTER_KEY);
+      if (savedFilter) {
+        filterSelect.value = savedFilter;
+      }
+
+      filterSelect.addEventListener('change', () => {
+        localStorage.setItem(FILTER_KEY, filterSelect.value);
+        applyFilter();
+      });
+
+      clearButton.addEventListener('click', () => {
+        list.replaceChildren();
+        seen.clear();
+        seenOrder.length = 0;
+      });
+
+      let wantWake = false;
+      let wakeLock = null;
+      const wakeSupported = 'wakeLock' in navigator;
+
+      function updateWakeButton() {
+        wakeButton.textContent = wakeLock ? '常亮:开' : '常亮:关';
+        wakeButton.classList.toggle('on', !!wakeLock);
+      }
+
+      async function requestWakeLock() {
+        if (!wakeSupported) {
+          return;
+        }
+
+        try {
+          wakeLock = await navigator.wakeLock.request('screen');
+          wakeLock.addEventListener('release', () => {
+            wakeLock = null;
+            updateWakeButton();
+          });
+        } catch {
+          wakeLock = null;
+          wantWake = false;
+        }
+
+        updateWakeButton();
+      }
+
+      if (!wakeSupported) {
+        wakeButton.hidden = true;
+      } else {
+        wakeButton.addEventListener('click', () => {
+          wantWake = !wantWake;
+
+          if (wantWake) {
+            void requestWakeLock();
+          } else {
+            wakeLock?.release();
+            wakeLock = null;
+            updateWakeButton();
+          }
+        });
+
+        document.addEventListener('visibilitychange', () => {
+          if (
+            document.visibilityState === 'visible' &&
+            wantWake &&
+            !wakeLock
+          ) {
+            void requestWakeLock();
+          }
+        });
+      }
+
+      updateFollowButton();
+      applyFilter();
+      setStatus('reconnecting');
+      connect();
+    </script>
+  </body>
+</html>

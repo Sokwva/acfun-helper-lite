@@ -74,9 +74,13 @@ export async function boot(): Promise<void> {
         );
       },
       ui: {
-        mount: (component, props) => {
-          mountVueComponent(component, props, ctx, controller.signal);
-        },
+        mount: (component, props) =>
+          mountVueComponent(component, props, ctx, controller.signal),
+        mountAt: (target, component, props) =>
+          mountVueComponent(component, props, ctx, controller.signal, {
+            target,
+            removeTarget: true,
+          }),
       },
     };
 

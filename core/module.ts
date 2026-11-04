@@ -7,7 +7,12 @@ import type {
 } from './settings/schema';
 
 export interface ModuleUI {
-  mount(component: Component, props?: Record<string, unknown>): void;
+  mount(component: Component, props?: Record<string, unknown>): () => void;
+  mountAt(
+    target: HTMLElement,
+    component: Component,
+    props?: Record<string, unknown>,
+  ): () => void;
 }
 
 export interface ModuleContext<S extends SettingsSchema> {

@@ -7,6 +7,7 @@ export default defineConfig({
     name: 'AcFun Helper Light',
     description: 'AcFun Helper lightweight rewrite',
     permissions: ['storage'],
+    host_permissions: ['http://127.0.0.1/*', 'http://localhost/*'],
     action: {
       default_title: 'AcFun Helper',
     },
